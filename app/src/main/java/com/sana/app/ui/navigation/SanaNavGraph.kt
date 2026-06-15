@@ -6,7 +6,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.sana.app.ui.screens.account.AccountScreen
+import com.sana.app.ui.screens.aaccount.AccountScreen
 import com.sana.app.ui.screens.daydetail.DayDetailScreen
 import com.sana.app.ui.screens.editplaylist.EditPlaylistScreen
 import com.sana.app.ui.screens.exercisedetail.ExerciseDetailScreen
