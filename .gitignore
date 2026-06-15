@@ -1,0 +1,17 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+local.properties
+app/src/main/java/com/sana/app/ui/screens/home/HomeScreen.kt
+app/src/main/java/com/sana/app/ui/screens/session/SessionScreen.kt
+app/src/main/java/com/sana/app/ui/screens/onboarding/OnboardingScreen.kt
+app/src/main/java/com/sana/app/ui/screens/account/AccountScreen.kt
+app/src/main/java/com/sana/app/ui/screens/editplaylist/EditPlaylistScreen.kt
+app/src/main/java/com/sana/app/ui/screens/exercisedetail/ExerciseDetailScreen.kt
