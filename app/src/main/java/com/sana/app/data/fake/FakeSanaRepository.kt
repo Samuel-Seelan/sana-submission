@@ -105,7 +105,7 @@ class FakeSanaRepository : SanaRepository {
                 id = "fake-session-1",
                 startedAtMillis = now - 18 * 60_000L,
                 endedAtMillis = now,
-                totalReps = 64,
+                totalReps = 66,
                 totalSets = 12,
                 totalTimeMs = 18 * 60_000L,
                 exerciseCount = SampleData.planItems.size,

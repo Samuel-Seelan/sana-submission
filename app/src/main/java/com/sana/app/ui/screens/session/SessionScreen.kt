@@ -56,6 +56,7 @@ import com.sana.app.ui.theme.SanaBackground
 import com.sana.app.ui.theme.SanaSurface
 import com.sana.app.ui.theme.SanaTheme
 import com.sana.app.ui.theme.StarGold
+import com.sana.app.viewmodel.SessionUiState
 
 /*
  * SessionScreen.kt — the guided workout session.
@@ -117,6 +118,51 @@ fun SessionScreen(
                 }
             },
             onEndEarly = { phase = SessionPhase.DONE },
+        )
+    }
+}
+
+@Composable
+fun SessionScreen(
+    state: SessionUiState,
+    onFinished: () -> Unit,
+    onStartSession: () -> Unit,
+    onStartExercise: () -> Unit,
+    onDecrementReps: () -> Unit,
+    onIncrementReps: () -> Unit,
+    onCompleteSet: () -> Unit,
+    onEndExercise: () -> Unit,
+    onEndEarly: () -> Unit,
+) {
+    if (state.plan.isEmpty()) {
+        MessageWithHomeButton(
+            message = "Your plan is empty. Add exercises before starting a session.",
+            onFinished = onFinished,
+        )
+        return
+    }
+
+    when (state.phase) {
+        SessionPhase.DONE -> SessionDoneContent(
+            plan = state.plan,
+            totalReps = state.totalReps,
+            totalTimeMs = state.totalTimeMs,
+            onFinished = onFinished,
+        )
+        else -> ActiveSession(
+            plan = state.plan,
+            currentIndex = state.currentIndex,
+            phase = state.phase,
+            repsThisSet = state.repsThisSet,
+            setsCompleted = state.setsCompleted,
+            onExit = onFinished,
+            onStartSession = onStartSession,
+            onStartExercise = onStartExercise,
+            onDecrementReps = onDecrementReps,
+            onIncrementReps = onIncrementReps,
+            onCompleteSet = onCompleteSet,
+            onEndExercise = onEndExercise,
+            onEndEarly = onEndEarly,
         )
     }
 }
@@ -396,7 +442,12 @@ private fun BottomActionArea(
 
 /** Post-session recap with stat chips and any new milestones. */
 @Composable
-private fun SessionDoneContent(plan: List<PlanItem>, onFinished: () -> Unit) {
+private fun SessionDoneContent(
+    plan: List<PlanItem>,
+    onFinished: () -> Unit,
+    totalReps: Int = 64,
+    totalTimeMs: Long = 18 * 60_000L,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -429,8 +480,8 @@ private fun SessionDoneContent(plan: List<PlanItem>, onFinished: () -> Unit) {
         Spacer(Modifier.height(24.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             StatChip(label = "Exercises", value = "${plan.size}")
-            StatChip(label = "Total reps", value = "64")
-            StatChip(label = "Duration", value = formatDuration(18 * 60_000L))
+            StatChip(label = "Total reps", value = "$totalReps")
+            StatChip(label = "Duration", value = formatDuration(totalTimeMs))
         }
 
         Spacer(Modifier.height(24.dp))
