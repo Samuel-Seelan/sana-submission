@@ -19,6 +19,7 @@ import androidx.camera.video.VideoCapture
 import androidx.camera.video.VideoRecordEvent
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,26 +42,46 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.pose.PoseDetection
+import com.google.mlkit.vision.pose.PoseLandmark
+import com.google.mlkit.vision.pose.defaults.PoseDetectorOptions
+import com.sana.app.vision.SquatRepCounter
 import java.io.File
 import java.util.concurrent.Executor
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.delay
 
 @Composable
 fun CameraSessionRecorder(
     shouldRecord: Boolean,
+    automaticRepCountingEnabled: Boolean = false,
+    squatRepCountingActive: Boolean = false,
     modifier: Modifier = Modifier,
     onRecordingFilePrepared: (String) -> Unit = {},
     onRecordingFinalized: (String) -> Unit = {},
     onRecordingError: (String) -> Unit = {},
+    onAutomaticRepCount: (Int) -> Unit = {},
+    onPoseStatusChanged: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val mainExecutor = remember(context) { ContextCompat.getMainExecutor(context) }
+    val squatRepCounter = remember { SquatRepCounter() }
+    val poseDetector = remember {
+        val options = PoseDetectorOptions.Builder()
+            .setDetectorMode(PoseDetectorOptions.STREAM_MODE)
+            .build()
+        PoseDetection.getClient(options)
+    }
+    val poseFrameInFlight = remember { AtomicBoolean(false) }
     val previewView = remember {
         PreviewView(context).apply {
             scaleType = PreviewView.ScaleType.FILL_CENTER
@@ -71,6 +92,7 @@ fun CameraSessionRecorder(
     var activeRecording by remember { mutableStateOf<Recording?>(null) }
     var currentOutputFile by remember { mutableStateOf<File?>(null) }
     var statusText by remember { mutableStateOf("Camera preview") }
+    var poseOverlay by remember { mutableStateOf(PoseOverlay()) }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { results ->
@@ -95,6 +117,14 @@ fun CameraSessionRecorder(
             },
         )
         return
+    }
+
+    LaunchedEffect(squatRepCountingActive) {
+        squatRepCounter.reset()
+        if (squatRepCountingActive) {
+            onAutomaticRepCount(0)
+            onPoseStatusChanged("Move fully into frame")
+        }
     }
 
     LaunchedEffect(previewView, lifecycleOwner) {
@@ -131,6 +161,38 @@ fun CameraSessionRecorder(
             statusText = "Camera unavailable"
             onRecordingError(error.message ?: "Could not start camera preview.")
         }
+    }
+
+    LaunchedEffect(automaticRepCountingEnabled, squatRepCountingActive, previewView) {
+        while (automaticRepCountingEnabled && squatRepCountingActive) {
+            if (poseFrameInFlight.compareAndSet(false, true)) {
+                val bitmap = previewView.bitmap
+                if (bitmap == null) {
+                    onPoseStatusChanged("Camera preview warming up")
+                    poseFrameInFlight.set(false)
+                } else {
+                    val inputImage = InputImage.fromBitmap(bitmap, 0)
+                    poseDetector.process(inputImage)
+                        .addOnSuccessListener { pose ->
+                            val result = squatRepCounter.update(pose)
+                            poseOverlay = pose.toPoseOverlay(
+                                imageWidth = bitmap.width,
+                                imageHeight = bitmap.height,
+                            )
+                            onAutomaticRepCount(result.reps)
+                            onPoseStatusChanged(result.status)
+                        }
+                        .addOnFailureListener { error ->
+                            onPoseStatusChanged(error.message ?: "Pose detection unavailable")
+                        }
+                        .addOnCompleteListener {
+                            poseFrameInFlight.set(false)
+                        }
+                }
+            }
+            delay(350L)
+        }
+        poseOverlay = PoseOverlay()
     }
 
     LaunchedEffect(shouldRecord, videoCapture) {
@@ -173,12 +235,17 @@ fun CameraSessionRecorder(
         onDispose {
             activeRecording?.stop()
             activeRecording = null
+            poseDetector.close()
         }
     }
 
     Box(modifier = modifier.background(Color.Black)) {
         AndroidView(
             factory = { previewView },
+            modifier = Modifier.matchParentSize(),
+        )
+        PoseSkeletonOverlay(
+            poseOverlay = poseOverlay,
             modifier = Modifier.matchParentSize(),
         )
         Text(
@@ -191,6 +258,115 @@ fun CameraSessionRecorder(
         )
     }
 }
+
+@Composable
+private fun PoseSkeletonOverlay(
+    poseOverlay: PoseOverlay,
+    modifier: Modifier = Modifier,
+) {
+    Canvas(modifier = modifier) {
+        val scaleX = if (poseOverlay.imageWidth > 0) size.width / poseOverlay.imageWidth else 1f
+        val scaleY = if (poseOverlay.imageHeight > 0) size.height / poseOverlay.imageHeight else 1f
+
+        poseOverlay.connections.forEach { connection ->
+            val start = poseOverlay.landmarks[connection.start]
+            val end = poseOverlay.landmarks[connection.end]
+            if (start != null && end != null) {
+                drawLine(
+                    color = Color(0xFF7DE3B2),
+                    start = start.toOffset(scaleX, scaleY),
+                    end = end.toOffset(scaleX, scaleY),
+                    strokeWidth = 5f,
+                    cap = StrokeCap.Round,
+                )
+            }
+        }
+
+        poseOverlay.landmarks.values.forEach { point ->
+            drawCircle(
+                color = Color(0xFFFFFFFF),
+                radius = 7f,
+                center = point.toOffset(scaleX, scaleY),
+            )
+            drawCircle(
+                color = Color(0xFF20C997),
+                radius = 4f,
+                center = point.toOffset(scaleX, scaleY),
+            )
+        }
+    }
+}
+
+private data class PoseOverlay(
+    val imageWidth: Int = 0,
+    val imageHeight: Int = 0,
+    val landmarks: Map<Int, PoseOverlayPoint> = emptyMap(),
+    val connections: List<PoseConnection> = PoseConnections,
+)
+
+private data class PoseOverlayPoint(
+    val x: Float,
+    val y: Float,
+) {
+    fun toOffset(scaleX: Float, scaleY: Float) =
+        androidx.compose.ui.geometry.Offset(x * scaleX, y * scaleY)
+}
+
+private data class PoseConnection(
+    val start: Int,
+    val end: Int,
+)
+
+private fun com.google.mlkit.vision.pose.Pose.toPoseOverlay(
+    imageWidth: Int,
+    imageHeight: Int,
+): PoseOverlay {
+    val landmarks = OverlayLandmarkTypes.mapNotNull { type ->
+        val landmark = getPoseLandmark(type)
+            ?.takeIf { it.inFrameLikelihood > 0.45f }
+            ?: return@mapNotNull null
+        type to PoseOverlayPoint(
+            x = landmark.position.x,
+            y = landmark.position.y,
+        )
+    }.toMap()
+
+    return PoseOverlay(
+        imageWidth = imageWidth,
+        imageHeight = imageHeight,
+        landmarks = landmarks,
+    )
+}
+
+private val OverlayLandmarkTypes = listOf(
+    PoseLandmark.LEFT_SHOULDER,
+    PoseLandmark.RIGHT_SHOULDER,
+    PoseLandmark.LEFT_ELBOW,
+    PoseLandmark.RIGHT_ELBOW,
+    PoseLandmark.LEFT_WRIST,
+    PoseLandmark.RIGHT_WRIST,
+    PoseLandmark.LEFT_HIP,
+    PoseLandmark.RIGHT_HIP,
+    PoseLandmark.LEFT_KNEE,
+    PoseLandmark.RIGHT_KNEE,
+    PoseLandmark.LEFT_ANKLE,
+    PoseLandmark.RIGHT_ANKLE,
+)
+
+private val PoseConnections = listOf(
+    PoseConnection(PoseLandmark.LEFT_SHOULDER, PoseLandmark.RIGHT_SHOULDER),
+    PoseConnection(PoseLandmark.LEFT_SHOULDER, PoseLandmark.LEFT_ELBOW),
+    PoseConnection(PoseLandmark.LEFT_ELBOW, PoseLandmark.LEFT_WRIST),
+    PoseConnection(PoseLandmark.RIGHT_SHOULDER, PoseLandmark.RIGHT_ELBOW),
+    PoseConnection(PoseLandmark.RIGHT_ELBOW, PoseLandmark.RIGHT_WRIST),
+    PoseConnection(PoseLandmark.LEFT_SHOULDER, PoseLandmark.LEFT_HIP),
+    PoseConnection(PoseLandmark.RIGHT_SHOULDER, PoseLandmark.RIGHT_HIP),
+    PoseConnection(PoseLandmark.LEFT_HIP, PoseLandmark.RIGHT_HIP),
+    PoseConnection(PoseLandmark.LEFT_HIP, PoseLandmark.LEFT_KNEE),
+    PoseConnection(PoseLandmark.LEFT_KNEE, PoseLandmark.LEFT_ANKLE),
+    PoseConnection(PoseLandmark.RIGHT_HIP, PoseLandmark.RIGHT_KNEE),
+    PoseConnection(PoseLandmark.RIGHT_KNEE, PoseLandmark.RIGHT_ANKLE),
+)
 
 @Composable
 private fun CameraPermissionPanel(
