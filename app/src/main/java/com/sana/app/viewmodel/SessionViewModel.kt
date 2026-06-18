@@ -23,6 +23,8 @@ data class SessionUiState(
     val totalReps: Int = 0,
     val totalSets: Int = 0,
     val totalTimeMs: Long = 0L,
+    val recordingFilePath: String? = null,
+    val recordingError: String? = null,
     val saveError: String? = null,
 )
 
@@ -64,8 +66,27 @@ class SessionViewModel(
         sessionStartedAtMillis = System.currentTimeMillis()
         mutableUiState.value = mutableUiState.value.copy(
             phase = SessionPhase.RESTING,
+            recordingError = null,
             saveError = null,
         )
+    }
+
+    fun onRecordingFilePrepared(path: String) {
+        mutableUiState.value = mutableUiState.value.copy(
+            recordingFilePath = path,
+            recordingError = null,
+        )
+    }
+
+    fun onRecordingFinalized(path: String) {
+        mutableUiState.value = mutableUiState.value.copy(
+            recordingFilePath = path,
+            recordingError = null,
+        )
+    }
+
+    fun onRecordingError(message: String) {
+        mutableUiState.value = mutableUiState.value.copy(recordingError = message)
     }
 
     fun startExercise() {
@@ -195,7 +216,7 @@ class SessionViewModel(
                 sets = result.sets,
                 reps = result.reps,
                 durationMs = result.durationMs,
-                videoStoragePath = null,
+                videoStoragePath = state.recordingFilePath,
                 createdAtMillis = endedAtMillis,
             )
         }

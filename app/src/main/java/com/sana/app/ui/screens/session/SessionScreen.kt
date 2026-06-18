@@ -133,6 +133,7 @@ fun SessionScreen(
     onCompleteSet: () -> Unit,
     onEndExercise: () -> Unit,
     onEndEarly: () -> Unit,
+    cameraContent: @Composable (Modifier) -> Unit = { modifier -> CameraPlaceholder(modifier) },
 ) {
     if (state.plan.isEmpty()) {
         MessageWithHomeButton(
@@ -163,6 +164,7 @@ fun SessionScreen(
             onCompleteSet = onCompleteSet,
             onEndExercise = onEndExercise,
             onEndEarly = onEndEarly,
+            cameraContent = cameraContent,
         )
     }
 }
@@ -205,6 +207,7 @@ private fun ActiveSession(
     onCompleteSet: () -> Unit,
     onEndExercise: () -> Unit,
     onEndEarly: () -> Unit,
+    cameraContent: @Composable (Modifier) -> Unit = { modifier -> CameraPlaceholder(modifier) },
 ) {
     val currentItem = plan[currentIndex]
     val exercise = currentItem.exercise
@@ -219,11 +222,10 @@ private fun ActiveSession(
                     .weight(1f),
                 label = "${exercise.name} — demo",
             )
-            // Bottom half: live camera mirror (placeholder).
-            CameraPlaceholder(
-                modifier = Modifier
+            cameraContent(
+                Modifier
                     .fillMaxWidth()
-                    .weight(1f),
+                    .weight(1f)
             )
         }
 

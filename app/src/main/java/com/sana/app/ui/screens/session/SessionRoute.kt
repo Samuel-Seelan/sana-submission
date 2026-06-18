@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import com.sana.app.ui.components.CameraSessionRecorder
 import com.sana.app.viewmodel.SessionUiState
 import com.sana.app.viewmodel.SessionViewModel
 
@@ -30,5 +31,15 @@ fun SessionRoute(
         onCompleteSet = viewModel::completeSet,
         onEndExercise = viewModel::endExercise,
         onEndEarly = viewModel::endEarly,
+        cameraContent = { modifier ->
+            CameraSessionRecorder(
+                shouldRecord = uiState.phase != SessionPhase.NOT_STARTED &&
+                    uiState.phase != SessionPhase.DONE,
+                modifier = modifier,
+                onRecordingFilePrepared = viewModel::onRecordingFilePrepared,
+                onRecordingFinalized = viewModel::onRecordingFinalized,
+                onRecordingError = viewModel::onRecordingError,
+            )
+        },
     )
 }
