@@ -10,10 +10,10 @@ import com.sana.app.ui.screens.account.AccountScreen
 import com.sana.app.ui.screens.daydetail.DayDetailScreen
 import com.sana.app.ui.screens.editplaylist.EditPlaylistScreen
 import com.sana.app.ui.screens.exercisedetail.ExerciseDetailScreen
-import com.sana.app.ui.screens.home.HomeScreen
+import com.sana.app.ui.screens.home.HomeRoute
 import com.sana.app.ui.screens.onboarding.OnboardingScreen
 import com.sana.app.ui.screens.overview.OverviewScreen
-import com.sana.app.ui.screens.session.SessionScreen
+import com.sana.app.ui.screens.session.SessionRoute
 
 /*
  * SanaNavGraph.kt — the app's navigation skeleton.
@@ -29,11 +29,14 @@ object Routes {
     const val EDIT_PLAYLIST = "edit_playlist"
     const val SESSION = "session"
     const val OVERVIEW = "overview"
+    const val SHARED_PLAYLISTS = "shared_playlists"
     const val DAY_DETAIL = "day/{epochDay}"
     const val EXERCISE_DETAIL = "exercise/{exerciseId}"
+    const val SHARED_PLAYLIST_DETAIL = "shared_playlist/{playlistId}"
 
     fun dayDetail(epochDay: Long) = "day/$epochDay"
     fun exerciseDetail(exerciseId: String) = "exercise/$exerciseId"
+    fun sharedPlaylistDetail(playlistId: String) = "shared_playlist/$playlistId"
 }
 
 @Composable
@@ -56,7 +59,7 @@ fun SanaNavGraph() {
             )
         }
         composable(Routes.HOME) {
-            HomeScreen(
+            HomeRoute(
                 onStartSession = { navController.navigate(Routes.SESSION) },
                 onEditPlaylist = { navController.navigate(Routes.EDIT_PLAYLIST) },
                 onOpenOverview = { navController.navigate(Routes.OVERVIEW) },
@@ -81,7 +84,7 @@ fun SanaNavGraph() {
             )
         }
         composable(Routes.SESSION) {
-            SessionScreen(
+            SessionRoute(
                 onFinished = { navController.popBackStack(Routes.HOME, inclusive = false) },
             )
         }
