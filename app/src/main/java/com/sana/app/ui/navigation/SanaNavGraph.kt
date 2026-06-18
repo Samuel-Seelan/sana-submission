@@ -29,11 +29,14 @@ object Routes {
     const val EDIT_PLAYLIST = "edit_playlist"
     const val SESSION = "session"
     const val OVERVIEW = "overview"
+    const val SHARED_PLAYLISTS = "shared_playlists"
     const val DAY_DETAIL = "day/{epochDay}"
     const val EXERCISE_DETAIL = "exercise/{exerciseId}"
+    const val SHARED_PLAYLIST_DETAIL = "shared_playlist/{playlistId}"
 
     fun dayDetail(epochDay: Long) = "day/$epochDay"
     fun exerciseDetail(exerciseId: String) = "exercise/$exerciseId"
+    fun sharedPlaylistDetail(playlistId: String) = "shared_playlist/$playlistId"
 }
 
 @Composable
