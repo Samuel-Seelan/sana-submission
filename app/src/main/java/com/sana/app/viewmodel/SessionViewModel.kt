@@ -23,8 +23,26 @@ data class SessionUiState(
     val totalReps: Int = 0,
     val totalSets: Int = 0,
     val totalTimeMs: Long = 0L,
+    val recordingFilePath: String? = null,
+    val recordingError: String? = null,
+    val automaticRepCountingEnabled: Boolean = false,
+    val poseStatus: String? = null,
     val saveError: String? = null,
-)
+) {
+    val currentExerciseId: String?
+        get() = plan.getOrNull(currentIndex)?.exercise?.id
+
+    val currentExerciseName: String?
+        get() = plan.getOrNull(currentIndex)?.exercise?.name
+
+    val isSquatExercise: Boolean
+        get() {
+            val id = currentExerciseId.orEmpty()
+            val name = currentExerciseName.orEmpty()
+            return id.contains("squat", ignoreCase = true) ||
+                name.contains("squat", ignoreCase = true)
+        }
+}
 
 private data class ExerciseResult(
     val exerciseId: String,
@@ -64,8 +82,49 @@ class SessionViewModel(
         sessionStartedAtMillis = System.currentTimeMillis()
         mutableUiState.value = mutableUiState.value.copy(
             phase = SessionPhase.RESTING,
+            recordingError = null,
             saveError = null,
         )
+    }
+
+    fun onRecordingFilePrepared(path: String) {
+        mutableUiState.value = mutableUiState.value.copy(
+            recordingFilePath = path,
+            recordingError = null,
+        )
+    }
+
+    fun onRecordingFinalized(path: String) {
+        mutableUiState.value = mutableUiState.value.copy(
+            recordingFilePath = path,
+            recordingError = null,
+        )
+    }
+
+    fun onRecordingError(message: String) {
+        mutableUiState.value = mutableUiState.value.copy(recordingError = message)
+    }
+
+    fun setAutomaticRepCountingEnabled(enabled: Boolean) {
+        mutableUiState.value = mutableUiState.value.copy(
+            automaticRepCountingEnabled = enabled,
+            poseStatus = if (enabled) "Move fully into frame" else null,
+        )
+    }
+
+    fun onPoseStatusChanged(message: String) {
+        mutableUiState.value = mutableUiState.value.copy(poseStatus = message)
+    }
+
+    fun onAutomaticRepCount(count: Int) {
+        val state = mutableUiState.value
+        if (
+            state.automaticRepCountingEnabled &&
+            state.phase == SessionPhase.EXERCISING &&
+            state.isSquatExercise
+        ) {
+            mutableUiState.value = state.copy(repsThisSet = count.coerceAtLeast(0))
+        }
     }
 
     fun startExercise() {
@@ -75,6 +134,11 @@ class SessionViewModel(
             phase = SessionPhase.EXERCISING,
             repsThisSet = 0,
             setsCompleted = 0,
+            poseStatus = if (mutableUiState.value.automaticRepCountingEnabled) {
+                "Move fully into frame"
+            } else {
+                null
+            },
             saveError = null,
         )
     }
@@ -195,7 +259,7 @@ class SessionViewModel(
                 sets = result.sets,
                 reps = result.reps,
                 durationMs = result.durationMs,
-                videoStoragePath = null,
+                videoStoragePath = state.recordingFilePath,
                 createdAtMillis = endedAtMillis,
             )
         }

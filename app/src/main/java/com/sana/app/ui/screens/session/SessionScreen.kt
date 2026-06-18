@@ -133,6 +133,7 @@ fun SessionScreen(
     onCompleteSet: () -> Unit,
     onEndExercise: () -> Unit,
     onEndEarly: () -> Unit,
+    cameraContent: @Composable (Modifier) -> Unit = { modifier -> CameraPlaceholder(modifier) },
 ) {
     if (state.plan.isEmpty()) {
         MessageWithHomeButton(
@@ -155,6 +156,9 @@ fun SessionScreen(
             phase = state.phase,
             repsThisSet = state.repsThisSet,
             setsCompleted = state.setsCompleted,
+            automaticRepCountingEnabled = state.automaticRepCountingEnabled,
+            isSquatExercise = state.isSquatExercise,
+            poseStatus = state.poseStatus,
             onExit = onFinished,
             onStartSession = onStartSession,
             onStartExercise = onStartExercise,
@@ -163,6 +167,7 @@ fun SessionScreen(
             onCompleteSet = onCompleteSet,
             onEndExercise = onEndExercise,
             onEndEarly = onEndEarly,
+            cameraContent = cameraContent,
         )
     }
 }
@@ -197,6 +202,9 @@ private fun ActiveSession(
     phase: SessionPhase,
     repsThisSet: Int,
     setsCompleted: Int,
+    automaticRepCountingEnabled: Boolean = false,
+    isSquatExercise: Boolean = false,
+    poseStatus: String? = null,
     onExit: () -> Unit,
     onStartSession: () -> Unit,
     onStartExercise: () -> Unit,
@@ -205,6 +213,7 @@ private fun ActiveSession(
     onCompleteSet: () -> Unit,
     onEndExercise: () -> Unit,
     onEndEarly: () -> Unit,
+    cameraContent: @Composable (Modifier) -> Unit = { modifier -> CameraPlaceholder(modifier) },
 ) {
     val currentItem = plan[currentIndex]
     val exercise = currentItem.exercise
@@ -219,11 +228,10 @@ private fun ActiveSession(
                     .weight(1f),
                 label = "${exercise.name} — demo",
             )
-            // Bottom half: live camera mirror (placeholder).
-            CameraPlaceholder(
-                modifier = Modifier
+            cameraContent(
+                Modifier
                     .fillMaxWidth()
-                    .weight(1f),
+                    .weight(1f)
             )
         }
 
@@ -248,6 +256,9 @@ private fun ActiveSession(
                         setsCompleted = setsCompleted,
                         targetSets = currentItem.targetSets,
                         reps = repsThisSet,
+                        automaticRepCountingEnabled = automaticRepCountingEnabled,
+                        isSquatExercise = isSquatExercise,
+                        poseStatus = poseStatus,
                         onDecrement = onDecrementReps,
                         onIncrement = onIncrementReps,
                         onCompleteSet = onCompleteSet,
@@ -327,6 +338,9 @@ private fun RepCounterCard(
     setsCompleted: Int,
     targetSets: Int,
     reps: Int,
+    automaticRepCountingEnabled: Boolean = false,
+    isSquatExercise: Boolean = false,
+    poseStatus: String? = null,
     onDecrement: () -> Unit,
     onIncrement: () -> Unit,
     onCompleteSet: () -> Unit,
@@ -359,6 +373,19 @@ private fun RepCounterCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (automaticRepCountingEnabled) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = if (isSquatExercise) {
+                        poseStatus ?: "Automatic squat counting"
+                    } else {
+                        "Automatic counting only runs on squat exercises"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Center,
+                )
+            }
             Spacer(Modifier.height(8.dp))
             FilledTonalButton(onClick = onCompleteSet) {
                 Text("Complete set")

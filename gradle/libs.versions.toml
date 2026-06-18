@@ -10,6 +10,8 @@ kotlin = "2.2.10"
 composeBom = "2026.02.01"
 navigationCompose = "2.9.8"
 iconsExtended = "1.7.8"
+camerax = "1.6.1"
+mlkitPose = "18.0.0-beta5"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -28,6 +30,11 @@ androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-te
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "iconsExtended" }
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+androidx-camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }
+androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
+androidx-camera-video = { group = "androidx.camera", name = "camera-video", version.ref = "camerax" }
+androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
+mlkit-pose-detection = { group = "com.google.mlkit", name = "pose-detection", version.ref = "mlkitPose" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

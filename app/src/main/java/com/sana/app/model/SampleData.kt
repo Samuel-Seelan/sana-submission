@@ -80,6 +80,22 @@ object SampleData {
         defaultDurationSec = 30,
     )
 
+    val bodyweightSquat = Exercise(
+        id = "bodyweight_squat",
+        name = "Bodyweight Squat",
+        description = "A controlled sit-back-and-stand movement that trains lower-body strength.",
+        instructions = "1. Stand with feet about shoulder-width apart.\n" +
+            "2. Push your hips back and bend your knees.\n" +
+            "3. Lower only as far as feels controlled and pain-free.\n" +
+            "4. Drive through your feet to stand tall again.",
+        type = ExerciseType.STRENGTH,
+        muscleGroups = listOf("quadriceps", "glutes", "hamstrings"),
+        difficulty = 2,
+        defaultReps = 8,
+        defaultSets = 3,
+        defaultDurationSec = 0,
+    )
+
     val pendulumSwings = Exercise(
         id = "pendulum_swings",
         name = "Pendulum Swings",
@@ -179,7 +195,7 @@ object SampleData {
     /** A broad catalog slice for grids and carousels. */
     val exercises: List<Exercise> = listOf(
         quadSets, straightLegRaise, heelSlides, wallSit, pendulumSwings,
-        birdDog, hamstringStretch, deadlift, singleLegBalance, gluteBridge,
+        bodyweightSquat, birdDog, hamstringStretch, deadlift, singleLegBalance, gluteBridge,
     )
 
     // ---- Injuries ----
@@ -226,9 +242,11 @@ object SampleData {
     // ---- Plan ----
 
     val planItems: List<PlanItem> = listOf(
+        PlanItem(bodyweightSquat, targetReps = 12, targetSets = 3, targetDurationSec = 0),
         PlanItem(quadSets, targetReps = 12, targetSets = 3, targetDurationSec = 0),
         PlanItem(straightLegRaise, targetReps = 10, targetSets = 3, targetDurationSec = 0),
         PlanItem(wallSit, targetReps = 0, targetSets = 3, targetDurationSec = 30),
+        PlanItem(bodyweightSquat, targetReps = 8, targetSets = 3, targetDurationSec = 0),
         PlanItem(heelSlides, targetReps = 10, targetSets = 3, targetDurationSec = 0),
         PlanItem(hamstringStretch, targetReps = 0, targetSets = 3, targetDurationSec = 30),
     )
@@ -242,6 +260,7 @@ object SampleData {
         ScoredExercise(straightLegRaise, ExerciseScore(blocked = false, recommended = true)),
         ScoredExercise(heelSlides, ExerciseScore(blocked = false, recommended = true)),
         ScoredExercise(wallSit, ExerciseScore(blocked = false, recommended = false)),
+        ScoredExercise(bodyweightSquat, ExerciseScore(blocked = false, recommended = false)),
         ScoredExercise(gluteBridge, ExerciseScore(blocked = false, recommended = false)),
         ScoredExercise(singleLegBalance, ExerciseScore(blocked = false, recommended = false)),
         ScoredExercise(deadlift, ExerciseScore(blocked = true, recommended = false)),
