@@ -1,0 +1,41 @@
+rules_version = '2';
+
+// Sana Firestore security rules.
+// Paste these into Firebase console → Firestore Database → Rules → Publish.
+// Each user owns everything under users/{uid}. Shared playlists are public to read; only the
+// owner can edit/delete one, but any signed-in user may bump the `uses` counter when they use it.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function owns(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    // Private per-user data: profile, plan, sessions, recordings, etc.
+    match /users/{userId}/{document=**} {
+      allow read, write: if owns(userId);
+    }
+
+    // Public shared playlists (the multi-user feature).
+    match /sharedPlaylists/{playlistId} {
+      allow read: if signedIn() && resource.data.published == true;
+      allow create: if signedIn() && request.resource.data.ownerUid == request.auth.uid;
+      allow update: if signedIn() && (
+        resource.data.ownerUid == request.auth.uid ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uses'])
+      );
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+
+      // Exercises inside a shared playlist. Anyone signed in can read them; only the owner writes.
+      match /items/{itemId} {
+        allow read: if signedIn();
+        allow write: if signedIn() &&
+          get(/databases/$(database)/documents/sharedPlaylists/$(playlistId)).data.ownerUid == request.auth.uid;
+      }
+    }
+  }
+}

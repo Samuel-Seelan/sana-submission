@@ -32,10 +32,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -51,8 +55,8 @@ import com.sana.app.model.ExerciseScore
 import com.sana.app.model.Recording
 import com.sana.app.model.SampleData
 import com.sana.app.ui.components.EmptyState
+import com.sana.app.ui.components.ExerciseDemoImage
 import com.sana.app.ui.components.SectionHeader
-import com.sana.app.ui.components.VideoPlaceholder
 import com.sana.app.ui.components.formatDuration
 import com.sana.app.ui.theme.BlockedRed
 import com.sana.app.ui.theme.SanaTheme
@@ -61,9 +65,10 @@ import com.sana.app.ui.theme.StarGold
 /*
  * ExerciseDetailScreen.kt — a single catalog exercise.
  * What: looping demo video, metadata chips, a safety banner (recommended / not advised),
- *       step-by-step instructions, past recording clips, and an "Add to plan" button.
+ *       step-by-step instructions, the user's past recording clips, and an "Add to plan" button
+ *       that persists to Firestore.
  * Who: Sam.
- * When: Goal 6 — UI skeleton.
+ * When: Goal 7 — Firebase integration.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,7 +79,19 @@ fun ExerciseDetailScreen(
         ?: SampleData.quadSets,
     score: ExerciseScore? = ExerciseScore(blocked = false, recommended = true),
     recordings: List<Recording> = SampleData.recordings,
+    inPlan: Boolean = false,
+    onAddToPlan: () -> Unit = {},
+    message: String? = null,
+    onMessageShown: () -> Unit = {},
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(message) {
+        if (message != null) {
+            snackbarHostState.showSnackbar(message)
+            onMessageShown()
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -92,6 +109,7 @@ fun ExerciseDetailScreen(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         if (exercise == null) {
             Box(
@@ -107,6 +125,8 @@ fun ExerciseDetailScreen(
                 exercise = exercise,
                 score = score,
                 recordings = recordings,
+                inPlan = inPlan,
+                onAddToPlan = onAddToPlan,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
@@ -121,14 +141,16 @@ private fun ExerciseDetailContent(
     exercise: Exercise,
     score: ExerciseScore?,
     recordings: List<Recording>,
+    inPlan: Boolean,
+    onAddToPlan: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.verticalScroll(rememberScrollState())) {
-        VideoPlaceholder(
+        ExerciseDemoImage(
+            exercise = exercise,
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f),
-            label = "${exercise.name} — demo",
         )
 
         Column(
@@ -207,10 +229,11 @@ private fun ExerciseDetailContent(
 
         Column(modifier = Modifier.padding(16.dp)) {
             Button(
-                onClick = {},
+                onClick = onAddToPlan,
+                enabled = !inPlan,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Add to plan")
+                Text(if (inPlan) "In your plan" else "Add to plan")
             }
             Text(
                 text = "Always follow your physiotherapist's guidance.",

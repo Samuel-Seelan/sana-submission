@@ -6,24 +6,25 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.sana.app.ui.screens.account.AccountScreen
-import com.sana.app.ui.screens.daydetail.DayDetailScreen
-import com.sana.app.ui.screens.editplaylist.EditPlaylistScreen
-import com.sana.app.ui.screens.exercisedetail.ExerciseDetailScreen
+import com.sana.app.ui.screens.account.AccountRoute
+import com.sana.app.ui.screens.daydetail.DayDetailRoute
+import com.sana.app.ui.screens.editplaylist.EditPlaylistRoute
+import com.sana.app.ui.screens.exercisedetail.ExerciseDetailRoute
 import com.sana.app.ui.screens.home.HomeRoute
-import com.sana.app.ui.screens.onboarding.OnboardingScreen
-import com.sana.app.ui.screens.overview.OverviewScreen
+import com.sana.app.ui.screens.overview.OverviewRoute
 import com.sana.app.ui.screens.session.SessionRoute
+import com.sana.app.ui.screens.sharedplaylistdetail.SharedPlaylistDetailRoute
+import com.sana.app.ui.screens.sharedplaylists.SharedPlaylistsRoute
 
 /*
- * SanaNavGraph.kt — the app's navigation skeleton.
- * What: defines every route and wires the navigation callbacks between the nine screens.
- *       Screens are pure UI (no view models yet), so navigation is the only wiring here.
+ * SanaNavGraph.kt — the signed-in app's navigation graph.
+ * What: defines every in-app route and wires navigation between the screens via their Route
+ *       wrappers (each Route owns its ViewModel). Onboarding lives outside this graph — the app
+ *       shell (SanaApp) shows it when signed out — so this graph starts at Home.
  * Who: Sana team (shared infrastructure).
- * When: Goal 6 — UI skeleton.
+ * When: Goal 7 — Firebase integration.
  */
 object Routes {
-    const val ONBOARDING = "onboarding"
     const val HOME = "home"
     const val ACCOUNT = "account"
     const val EDIT_PLAYLIST = "edit_playlist"
@@ -43,21 +44,10 @@ object Routes {
 fun SanaNavGraph() {
     val navController = rememberNavController()
 
-    // The skeleton boots straight to Home so the main flow is easy to demo. Onboarding is
-    // still reachable (sign out from Account) and previewable on its own.
     NavHost(
         navController = navController,
         startDestination = Routes.HOME,
     ) {
-        composable(Routes.ONBOARDING) {
-            OnboardingScreen(
-                onAuthenticated = {
-                    navController.navigate(Routes.HOME) {
-                        popUpTo(Routes.ONBOARDING) { inclusive = true }
-                    }
-                }
-            )
-        }
         composable(Routes.HOME) {
             HomeRoute(
                 onStartSession = { navController.navigate(Routes.SESSION) },
@@ -68,19 +58,15 @@ fun SanaNavGraph() {
             )
         }
         composable(Routes.ACCOUNT) {
-            AccountScreen(
+            AccountRoute(
                 onBack = { navController.popBackStack() },
-                onSignedOut = {
-                    navController.navigate(Routes.ONBOARDING) {
-                        popUpTo(0) { inclusive = true }
-                    }
-                },
             )
         }
         composable(Routes.EDIT_PLAYLIST) {
-            EditPlaylistScreen(
+            EditPlaylistRoute(
                 onBack = { navController.popBackStack() },
                 onOpenExercise = { id -> navController.navigate(Routes.exerciseDetail(id)) },
+                onBrowseShared = { navController.navigate(Routes.SHARED_PLAYLISTS) },
             )
         }
         composable(Routes.SESSION) {
@@ -89,16 +75,22 @@ fun SanaNavGraph() {
             )
         }
         composable(Routes.OVERVIEW) {
-            OverviewScreen(
+            OverviewRoute(
                 onBack = { navController.popBackStack() },
                 onOpenDay = { epochDay -> navController.navigate(Routes.dayDetail(epochDay)) },
+            )
+        }
+        composable(Routes.SHARED_PLAYLISTS) {
+            SharedPlaylistsRoute(
+                onBack = { navController.popBackStack() },
+                onOpenPlaylist = { id -> navController.navigate(Routes.sharedPlaylistDetail(id)) },
             )
         }
         composable(
             route = Routes.DAY_DETAIL,
             arguments = listOf(navArgument("epochDay") { type = NavType.LongType }),
         ) { backStackEntry ->
-            DayDetailScreen(
+            DayDetailRoute(
                 epochDay = backStackEntry.arguments?.getLong("epochDay") ?: 0L,
                 onBack = { navController.popBackStack() },
                 onOpenExercise = { id -> navController.navigate(Routes.exerciseDetail(id)) },
@@ -108,9 +100,20 @@ fun SanaNavGraph() {
             route = Routes.EXERCISE_DETAIL,
             arguments = listOf(navArgument("exerciseId") { type = NavType.StringType }),
         ) { backStackEntry ->
-            ExerciseDetailScreen(
+            ExerciseDetailRoute(
                 exerciseId = backStackEntry.arguments?.getString("exerciseId").orEmpty(),
                 onBack = { navController.popBackStack() },
+            )
+        }
+        composable(
+            route = Routes.SHARED_PLAYLIST_DETAIL,
+            arguments = listOf(navArgument("playlistId") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            SharedPlaylistDetailRoute(
+                playlistId = backStackEntry.arguments?.getString("playlistId").orEmpty(),
+                onBack = { navController.popBackStack() },
+                onUsed = { navController.popBackStack(Routes.HOME, inclusive = false) },
+                onOpenExercise = { id -> navController.navigate(Routes.exerciseDetail(id)) },
             )
         }
     }

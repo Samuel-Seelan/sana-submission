@@ -2,7 +2,7 @@ package com.sana.app.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.sana.app.data.fake.FakeRepositories
+import com.sana.app.di.AppModule
 import com.sana.app.model.Milestone
 import com.sana.app.model.PlanItem
 import com.sana.app.model.UserProfile
@@ -24,7 +24,7 @@ data class HomeUiState(
 )
 
 class HomeViewModel(
-    private val sanaRepository: SanaRepository = FakeRepositories.sanaRepository,
+    private val sanaRepository: SanaRepository = AppModule.sanaRepository,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = mutableUiState.asStateFlow()

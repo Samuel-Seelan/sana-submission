@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,17 +22,23 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import com.sana.app.model.CatalogGroup
 import com.sana.app.model.Display
 import com.sana.app.model.Exercise
+import com.sana.app.model.PlanItem
 import com.sana.app.model.SampleData
 import com.sana.app.model.ScoredExercise
 import com.sana.app.ui.components.EmptyState
@@ -56,11 +64,11 @@ import com.sana.app.ui.theme.SanaTheme
 
 /*
  * EditPlaylistScreen.kt — build the day's workout.
- * What: the working plan as a removable card row, then the full scored catalog with search,
- *       a "My injuries only" filter, and single-select muscle-group filters. Add / remove
- *       toggle the plan; Save commits (back discards).
+ * What: the working plan as a removable card row, then the full scored catalog with working search,
+ *       a "My injuries only" filter, and muscle-group filters. Add / remove edit the plan in the
+ *       ViewModel; Save persists to Firestore; Share publishes the plan for other users.
  * Who: Sam.
- * When: Goal 6 — UI skeleton.
+ * When: Goal 7 — Firebase integration.
  */
 
 /** Matches the card badge scrim so overlaid icon buttons read against any thumbnail. */
@@ -71,16 +79,41 @@ private val OverlayScrim = Color(0xCC0E1420)
 fun EditPlaylistScreen(
     onBack: () -> Unit,
     onOpenExercise: (String) -> Unit,
-    initialPlan: List<Exercise> = SampleData.planExercises,
+    onBrowseShared: () -> Unit = {},
+    planItems: List<PlanItem> = SampleData.planItems,
     catalogGroups: List<CatalogGroup> = SampleData.catalogGroups,
     muscleGroupKeys: List<String> = SampleData.muscleGroupKeys,
+    isSaving: Boolean = false,
+    message: String? = null,
+    onMessageShown: () -> Unit = {},
+    onAddExercise: (String) -> Unit = {},
+    onRemoveExercise: (String) -> Unit = {},
+    onSave: () -> Unit = {},
+    onPublish: (title: String, description: String) -> Unit = { _, _ -> },
 ) {
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var myInjuriesOnly by rememberSaveable { mutableStateOf(false) }
     var muscleFilter by rememberSaveable { mutableStateOf<String?>(null) }
-    var planIds by remember { mutableStateOf(initialPlan.map { it.id }.toSet()) }
+    var showPublishDialog by rememberSaveable { mutableStateOf(false) }
 
-    val planExercises = initialPlan.filter { it.id in planIds }
+    val planIds = planItems.map { it.exercise.id }.toSet()
+    val planExercises = planItems.map { it.exercise }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(message) {
+        if (message != null) {
+            snackbarHostState.showSnackbar(message)
+            onMessageShown()
+        }
+    }
+
+    fun applyFilters(exercises: List<ScoredExercise>): List<ScoredExercise> = exercises.filter { scored ->
+        val matchesQuery = searchQuery.isBlank() ||
+            scored.exercise.name.contains(searchQuery.trim(), ignoreCase = true)
+        val matchesMuscle = muscleFilter == null || muscleFilter in scored.exercise.muscleGroups
+        val matchesInjury = !myInjuriesOnly || scored.score.recommended
+        matchesQuery && matchesMuscle && matchesInjury
+    }
 
     Scaffold(
         topBar = {
@@ -92,12 +125,13 @@ fun EditPlaylistScreen(
                     }
                 },
                 actions = {
-                    TextButton(onClick = onBack) {
-                        Text("Save")
+                    TextButton(onClick = onSave, enabled = !isSaving) {
+                        Text(if (isSaving) "Saving…" else "Save")
                     }
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -124,9 +158,31 @@ fun EditPlaylistScreen(
                             PlanCard(
                                 exercise = exercise,
                                 onClick = { onOpenExercise(exercise.id) },
-                                onRemove = { planIds = planIds - exercise.id },
+                                onRemove = { onRemoveExercise(exercise.id) },
                             )
                         }
+                    }
+                }
+            }
+            item(key = "share_actions") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Button(
+                        onClick = { showPublishDialog = true },
+                        enabled = planExercises.isNotEmpty() && !isSaving,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text("Share plan")
+                    }
+                    OutlinedButton(
+                        onClick = onBrowseShared,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text("Browse shared")
                     }
                 }
             }
@@ -174,27 +230,89 @@ fun EditPlaylistScreen(
                 }
             }
             catalogGroups.forEach { group ->
-                item(key = "group_header_${group.key}") {
-                    SectionHeader(group.title, modifier = Modifier.padding(horizontal = 16.dp))
-                }
-                item(key = "group_row_${group.key}") {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        items(group.exercises, key = { it.exercise.id }) { scored ->
-                            CatalogCard(
-                                scored = scored,
-                                added = scored.exercise.id in planIds,
-                                onClick = { onOpenExercise(scored.exercise.id) },
-                                onAdd = { planIds = planIds + scored.exercise.id },
-                            )
+                val filtered = applyFilters(group.exercises)
+                if (filtered.isNotEmpty()) {
+                    item(key = "group_header_${group.key}") {
+                        SectionHeader(group.title, modifier = Modifier.padding(horizontal = 16.dp))
+                    }
+                    item(key = "group_row_${group.key}") {
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            items(filtered, key = { it.exercise.id }) { scored ->
+                                CatalogCard(
+                                    scored = scored,
+                                    added = scored.exercise.id in planIds,
+                                    onClick = { onOpenExercise(scored.exercise.id) },
+                                    onAdd = { onAddExercise(scored.exercise.id) },
+                                )
+                            }
                         }
                     }
                 }
             }
         }
     }
+
+    if (showPublishDialog) {
+        PublishDialog(
+            onDismiss = { showPublishDialog = false },
+            onPublish = { title, description ->
+                showPublishDialog = false
+                onPublish(title, description)
+            },
+        )
+    }
+}
+
+/** Title + description prompt shown before publishing the current plan as a shared playlist. */
+@Composable
+private fun PublishDialog(
+    onDismiss: () -> Unit,
+    onPublish: (title: String, description: String) -> Unit,
+) {
+    var title by rememberSaveable { mutableStateOf("") }
+    var description by rememberSaveable { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Share your plan") },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = "Publish your current plan so other Sana users can browse and use it.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Title") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Description") },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onPublish(title, description) },
+                enabled = title.isNotBlank(),
+            ) {
+                Text("Publish")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
 }
 
 /** Working-plan card with a remove (X) overlay at the top-start corner. */

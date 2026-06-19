@@ -386,4 +386,43 @@ object SampleData {
     val user = UserProfile(name = "Alex Rivera", email = "alex.rivera@example.com")
 
     val selectedInjuryIds: Set<String> = setOf("acl_tear", "lower_back_strain")
+
+    // ---- Shared playlists (multi-user) ----
+
+    val sharedPlaylistSummaries: List<SharedPlaylistSummary> = listOf(
+        SharedPlaylistSummary(
+            id = "knee-starter",
+            ownerUid = "coach-maya",
+            ownerName = "Maya Chen",
+            title = "Knee recovery starter",
+            description = "Gentle quad activation, knee mobility, and supported holds.",
+            injuryFocus = listOf("acl_tear", "meniscus_tear"),
+            exerciseCount = 4,
+            createdAtMillis = System.currentTimeMillis() - 3 * 86_400_000L,
+            uses = 18,
+        ),
+        SharedPlaylistSummary(
+            id = "back-core-reset",
+            ownerUid = "coach-ravi",
+            ownerName = "Ravi Patel",
+            title = "Back and core reset",
+            description = "Low-impact stability work for early lower-back recovery.",
+            injuryFocus = listOf("lower_back_strain"),
+            exerciseCount = 3,
+            createdAtMillis = System.currentTimeMillis() - 6 * 86_400_000L,
+            uses = 11,
+        ),
+    )
+
+    val sharedPlaylistDetail: SharedPlaylist = SharedPlaylist(
+        id = "knee-starter",
+        ownerUid = "coach-maya",
+        ownerName = "Maya Chen",
+        title = "Knee recovery starter",
+        description = "Gentle quad activation, knee mobility, and supported holds.",
+        injuryFocus = listOf("acl_tear", "meniscus_tear"),
+        items = planItems.take(4),
+        createdAtMillis = System.currentTimeMillis() - 3 * 86_400_000L,
+        uses = 18,
+    )
 }

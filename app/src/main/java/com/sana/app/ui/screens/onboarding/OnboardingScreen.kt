@@ -52,10 +52,11 @@ import com.sana.app.ui.theme.SanaTheme
 
 /*
  * OnboardingScreen.kt — sign up / log in entry point.
- * What: a tabbed form that either creates an account (name, email, password, injury
- *       selection) or logs in (email, password). Selected injuries drive the recovery plan.
+ * What: a tabbed form that either creates an account (name, email, password, injury selection) or
+ *       logs in (email, password). Selected injuries seed the curated recovery plan. Credentials are
+ *       hoisted to the ViewModel, which performs Firebase Auth; this screen stays pure UI.
  * Who: Mimo.
- * When: Goal 6 — UI skeleton.
+ * When: Goal 7 — Firebase auth.
  */
 
 private const val TAB_SIGN_UP = 0
@@ -63,7 +64,11 @@ private const val TAB_LOG_IN = 1
 
 @Composable
 fun OnboardingScreen(
-    onAuthenticated: () -> Unit,
+    onSignUp: (name: String, email: String, password: String, injuryIds: Set<String>) -> Unit = { _, _, _, _ -> },
+    onSignIn: (email: String, password: String) -> Unit = { _, _ -> },
+    onFieldChanged: () -> Unit = {},
+    isSubmitting: Boolean = false,
+    errorMessage: String? = null,
     injuryProfiles: List<InjuryProfile> = SampleData.injuryProfiles,
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(TAB_SIGN_UP) }
@@ -103,12 +108,12 @@ fun OnboardingScreen(
         ) {
             Tab(
                 selected = selectedTab == TAB_SIGN_UP,
-                onClick = { selectedTab = TAB_SIGN_UP },
+                onClick = { selectedTab = TAB_SIGN_UP; onFieldChanged() },
                 text = { Text("Sign up") },
             )
             Tab(
                 selected = selectedTab == TAB_LOG_IN,
-                onClick = { selectedTab = TAB_LOG_IN },
+                onClick = { selectedTab = TAB_LOG_IN; onFieldChanged() },
                 text = { Text("Log in") },
             )
         }
@@ -117,11 +122,11 @@ fun OnboardingScreen(
         if (selectedTab == TAB_SIGN_UP) {
             SignUpForm(
                 name = name,
-                onNameChange = { name = it },
+                onNameChange = { name = it; onFieldChanged() },
                 email = signUpEmail,
-                onEmailChange = { signUpEmail = it },
+                onEmailChange = { signUpEmail = it; onFieldChanged() },
                 password = signUpPassword,
-                onPasswordChange = { signUpPassword = it },
+                onPasswordChange = { signUpPassword = it; onFieldChanged() },
                 injuryProfiles = injuryProfiles,
                 selectedInjuryIds = selectedInjuryIds,
                 onToggleInjury = { id ->
@@ -129,15 +134,28 @@ fun OnboardingScreen(
                         if (id in selectedInjuryIds) selectedInjuryIds - id
                         else selectedInjuryIds + id
                 },
-                onSubmit = onAuthenticated,
+                isSubmitting = isSubmitting,
+                onSubmit = { onSignUp(name, signUpEmail, signUpPassword, selectedInjuryIds) },
             )
         } else {
             LogInForm(
                 email = logInEmail,
-                onEmailChange = { logInEmail = it },
+                onEmailChange = { logInEmail = it; onFieldChanged() },
                 password = logInPassword,
-                onPasswordChange = { logInPassword = it },
-                onSubmit = onAuthenticated,
+                onPasswordChange = { logInPassword = it; onFieldChanged() },
+                isSubmitting = isSubmitting,
+                onSubmit = { onSignIn(logInEmail, logInPassword) },
+            )
+        }
+
+        if (errorMessage != null) {
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = errorMessage,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
 
@@ -166,6 +184,7 @@ private fun SignUpForm(
     injuryProfiles: List<InjuryProfile>,
     selectedInjuryIds: Set<String>,
     onToggleInjury: (String) -> Unit,
+    isSubmitting: Boolean,
     onSubmit: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -200,7 +219,11 @@ private fun SignUpForm(
             )
         }
 
-        SubmitButton(label = "Create account", onClick = onSubmit)
+        SubmitButton(
+            label = if (isSubmitting) "Creating account…" else "Create account",
+            enabled = !isSubmitting,
+            onClick = onSubmit,
+        )
     }
 }
 
@@ -210,6 +233,7 @@ private fun LogInForm(
     onEmailChange: (String) -> Unit,
     password: String,
     onPasswordChange: (String) -> Unit,
+    isSubmitting: Boolean,
     onSubmit: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -221,7 +245,11 @@ private fun LogInForm(
             modifier = Modifier.fillMaxWidth(),
         )
         PasswordField(value = password, onValueChange = onPasswordChange)
-        SubmitButton(label = "Log in", onClick = onSubmit)
+        SubmitButton(
+            label = if (isSubmitting) "Signing in…" else "Log in",
+            enabled = !isSubmitting,
+            onClick = onSubmit,
+        )
     }
 }
 
@@ -290,9 +318,10 @@ private fun InjuryCard(
 }
 
 @Composable
-private fun SubmitButton(label: String, onClick: () -> Unit) {
+private fun SubmitButton(label: String, enabled: Boolean, onClick: () -> Unit) {
     Button(
         onClick = onClick,
+        enabled = enabled,
         modifier = Modifier
             .fillMaxWidth()
             .height(48.dp),
@@ -305,6 +334,14 @@ private fun SubmitButton(label: String, onClick: () -> Unit) {
 @Composable
 private fun OnboardingScreenPreview() {
     SanaTheme {
-        OnboardingScreen(onAuthenticated = {})
+        OnboardingScreen()
+    }
+}
+
+@Preview(name = "Onboarding — error", showBackground = true, backgroundColor = 0xFF0E1420, heightDp = 1100)
+@Composable
+private fun OnboardingErrorPreview() {
+    SanaTheme {
+        OnboardingScreen(errorMessage = "Password must be at least 6 characters.")
     }
 }

@@ -29,9 +29,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,25 +52,37 @@ import com.sana.app.ui.theme.SanaTheme
 
 /*
  * AccountScreen.kt — profile management.
- * What: edit name/email, toggle the user's injuries, change password, and sign out.
- *       Injuries drive exercise recommendations, so editing them can rebuild the plan.
+ * What: edit name/email, toggle the user's injuries, change password, and sign out. Edits are saved
+ *       to Firestore through the ViewModel; injuries drive exercise recommendations and the plan.
  * Who: Mimo.
- * When: Goal 6 — UI skeleton.
+ * When: Goal 7 — Firebase integration.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountScreen(
     onBack: () -> Unit,
-    onSignedOut: () -> Unit,
+    onSignOut: () -> Unit = {},
     user: UserProfile = SampleData.user,
     injuryProfiles: List<InjuryProfile> = SampleData.injuryProfiles,
     initialSelectedInjuryIds: Set<String> = SampleData.selectedInjuryIds,
+    onSave: (name: String, email: String, injuryIds: Set<String>) -> Unit = { _, _, _ -> },
+    onChangePassword: (String) -> Unit = {},
+    message: String? = null,
+    onMessageShown: () -> Unit = {},
 ) {
     var name by rememberSaveable { mutableStateOf(user.name) }
     var email by rememberSaveable { mutableStateOf(user.email) }
     var selectedInjuryIds by remember { mutableStateOf(initialSelectedInjuryIds) }
     var currentPassword by rememberSaveable { mutableStateOf("") }
     var newPassword by rememberSaveable { mutableStateOf("") }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(message) {
+        if (message != null) {
+            snackbarHostState.showSnackbar(message)
+            onMessageShown()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -80,6 +95,7 @@ fun AccountScreen(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -94,6 +110,7 @@ fun AccountScreen(
                 onNameChange = { name = it },
                 email = email,
                 onEmailChange = { email = it },
+                onSave = { onSave(name, email, selectedInjuryIds) },
             )
             InjuriesSection(
                 injuryProfiles = injuryProfiles,
@@ -103,14 +120,20 @@ fun AccountScreen(
                         if (id in selectedInjuryIds) selectedInjuryIds - id
                         else selectedInjuryIds + id
                 },
+                onSave = { onSave(name, email, selectedInjuryIds) },
             )
             PasswordSection(
                 currentPassword = currentPassword,
                 onCurrentPasswordChange = { currentPassword = it },
                 newPassword = newPassword,
                 onNewPasswordChange = { newPassword = it },
+                onChangePassword = {
+                    onChangePassword(newPassword)
+                    currentPassword = ""
+                    newPassword = ""
+                },
             )
-            SignOutButton(onSignOut = onSignedOut)
+            SignOutButton(onSignOut = onSignOut)
             Spacer(modifier = Modifier.height(8.dp))
         }
     }
@@ -122,6 +145,7 @@ private fun ProfileSection(
     onNameChange: (String) -> Unit,
     email: String,
     onEmailChange: (String) -> Unit,
+    onSave: () -> Unit,
 ) {
     SectionCard {
         SectionHeader(title = "Profile")
@@ -140,7 +164,7 @@ private fun ProfileSection(
             modifier = Modifier.fillMaxWidth(),
         )
         Button(
-            onClick = {},
+            onClick = onSave,
             enabled = name.isNotBlank() && email.isNotBlank(),
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -155,6 +179,7 @@ private fun InjuriesSection(
     injuryProfiles: List<InjuryProfile>,
     selectedInjuryIds: Set<String>,
     onToggleInjury: (String) -> Unit,
+    onSave: () -> Unit,
 ) {
     SectionCard {
         SectionHeader(title = "Injuries")
@@ -195,7 +220,7 @@ private fun InjuriesSection(
             )
         }
         Button(
-            onClick = {},
+            onClick = onSave,
             enabled = selectedInjuryIds.isNotEmpty(),
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -210,6 +235,7 @@ private fun PasswordSection(
     onCurrentPasswordChange: (String) -> Unit,
     newPassword: String,
     onNewPasswordChange: (String) -> Unit,
+    onChangePassword: () -> Unit,
 ) {
     SectionCard {
         SectionHeader(title = "Password")
@@ -231,7 +257,7 @@ private fun PasswordSection(
             modifier = Modifier.fillMaxWidth(),
         )
         Button(
-            onClick = {},
+            onClick = onChangePassword,
             enabled = currentPassword.isNotEmpty() && newPassword.isNotEmpty(),
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -277,6 +303,6 @@ private fun SectionCard(content: @Composable () -> Unit) {
 @Composable
 private fun AccountScreenPreview() {
     SanaTheme {
-        AccountScreen(onBack = {}, onSignedOut = {})
+        AccountScreen(onBack = {})
     }
 }
