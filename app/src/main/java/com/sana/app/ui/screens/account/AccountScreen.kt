@@ -76,6 +76,12 @@ fun AccountScreen(
     var currentPassword by rememberSaveable { mutableStateOf("") }
     var newPassword by rememberSaveable { mutableStateOf("") }
 
+    LaunchedEffect(user.name, user.email, initialSelectedInjuryIds) {
+        name = user.name
+        email = user.email
+        selectedInjuryIds = initialSelectedInjuryIds
+    }
+
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(message) {
         if (message != null) {
