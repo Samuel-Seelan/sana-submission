@@ -32,6 +32,8 @@ data class Exercise(
     val defaultSets: Int,
     /** For timed holds; 0 when rep-based. */
     val defaultDurationSec: Int,
+    /** YouTube video id for the embedded exercise demonstration, if available. */
+    val youtubeVideoId: String? = null,
 ) {
     /** "3 × 12 reps" or "3 × 30s" depending on whether the exercise is rep- or time-based. */
     fun targetLabel(): String =

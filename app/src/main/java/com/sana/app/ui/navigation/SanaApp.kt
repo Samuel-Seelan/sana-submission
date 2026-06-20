@@ -9,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.google.firebase.crashlytics.buildtools.reloc.org.apache.http.auth.AuthState
 import com.sana.app.ui.screens.onboarding.OnboardingRoute
 import com.sana.app.viewmodel.AuthState
 import com.sana.app.viewmodel.AuthViewModel

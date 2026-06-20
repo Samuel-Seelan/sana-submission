@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.androidx.camera.lifecycle)
     implementation(libs.androidx.camera.video)
     implementation(libs.androidx.camera.view)
+    implementation(libs.firebase.crashlytics.buildtools)
     implementation(libs.mlkit.pose.detection)
 
     implementation(platform(libs.firebase.bom))

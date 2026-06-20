@@ -1,5 +1,7 @@
 package com.sana.app.ui.components
 
+import android.webkit.WebChromeClient
+import android.webkit.WebView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -36,6 +38,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.sana.app.model.Exercise
 import com.sana.app.model.ExerciseType
 import com.sana.app.model.SampleData
@@ -114,6 +117,79 @@ fun CameraPlaceholder(
             )
         }
     }
+}
+
+/** Shows an embedded YouTube demo when an exercise has a video id, otherwise falls back to art. */
+@Composable
+fun ExerciseDemoMedia(
+    exercise: Exercise,
+    modifier: Modifier = Modifier,
+) {
+    val videoId = exercise.youtubeVideoId
+    if (videoId.isNullOrBlank()) {
+        ExerciseDemoImage(exercise = exercise, modifier = modifier)
+    } else {
+        YouTubeEmbed(videoId = videoId, modifier = modifier)
+    }
+}
+
+@Composable
+fun YouTubeEmbed(
+    videoId: String,
+    modifier: Modifier = Modifier,
+) {
+    AndroidView(
+        modifier = modifier.background(Color.Black),
+        factory = { context ->
+            WebView(context).apply {
+                webChromeClient = WebChromeClient()
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                settings.mediaPlaybackRequiresUserGesture = false
+                loadYouTubeEmbed(videoId)
+            }
+        },
+        update = { webView ->
+            if (webView.tag != videoId) {
+                webView.loadYouTubeEmbed(videoId)
+            }
+        },
+    )
+}
+
+private fun WebView.loadYouTubeEmbed(videoId: String) {
+    tag = videoId
+    loadDataWithBaseURL(
+        "https://www.youtube.com",
+        """
+        <!doctype html>
+        <html>
+          <head>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              html, body, iframe {
+                margin: 0;
+                width: 100%;
+                height: 100%;
+                background: #000;
+              }
+            </style>
+          </head>
+          <body>
+            <iframe
+              src="https://www.youtube.com/embed/$videoId?playsinline=1&rel=0&modestbranding=1"
+              title="Exercise demonstration"
+              frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowfullscreen>
+            </iframe>
+          </body>
+        </html>
+        """.trimIndent(),
+        "text/html",
+        "utf-8",
+        null,
+    )
 }
 
 /**
