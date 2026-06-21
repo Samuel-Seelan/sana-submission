@@ -12,6 +12,12 @@ import com.sana.app.model.WeeklyStat
 import com.sana.app.model.WorkoutSession
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * What: defines the app's data operations for profiles, injuries, exercises, workout plans,
+ * progress, sessions, and recordings.
+ * Who: Isaac.
+ * When: Goal 7 — Firebase integration.
+ */
 interface SanaRepository {
     fun observeUserProfile(): Flow<UserProfile?>
 

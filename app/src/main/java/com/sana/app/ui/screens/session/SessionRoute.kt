@@ -13,6 +13,12 @@ import com.sana.app.ui.components.CameraSessionRecorder
 import com.sana.app.viewmodel.SessionUiState
 import com.sana.app.viewmodel.SessionViewModel
 
+/**
+ * What: connects the guided workout screen to session state, camera recording, and automatic rep
+ * counting controls.
+ * Who: Isaac.
+ * When: Goal 7 — Firebase integration.
+ */
 @Composable
 fun SessionRoute(
     onFinished: () -> Unit,

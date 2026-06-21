@@ -8,6 +8,13 @@ import androidx.compose.runtime.remember
 import com.sana.app.viewmodel.HomeUiState
 import com.sana.app.viewmodel.HomeViewModel
 
+/*
+ * HomeRoute.kt — the landing screen.
+ * What: greeting, a "Today's Workout" carousel with Start / Edit actions, the weekly
+ *       progress chart, and a link to the full plan overview.
+ * Who: Isaac.
+ * When: Goal 6 — UI skeleton.
+ */
 @Composable
 fun HomeRoute(
     onStartSession: () -> Unit,

@@ -3,6 +3,11 @@ package com.sana.app.repository
 import com.sana.app.model.AuthUser
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * What: defines the authentication operations and signed-in user stream used by the app.
+ * Who: Isaac.
+ * When: Goal 7 — Firebase integration.
+ */
 interface AuthRepository {
     val currentUser: Flow<AuthUser?>
 

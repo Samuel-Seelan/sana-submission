@@ -62,7 +62,7 @@ import com.sana.app.viewmodel.SessionUiState
  * SessionScreen.kt — the guided workout session.
  * What: a demo video on top, the live camera mirror below, and a per-exercise rep counter.
  *       The session walks NOT_STARTED -> RESTING -> EXERCISING (repeat) -> DONE.
- * Who: Isaac
+ * Who: Isaac.
  * When: Goal 6 — UI skeleton.
  *
  * The real app records one continuous video (CameraX) and plays demos with Media3. For the

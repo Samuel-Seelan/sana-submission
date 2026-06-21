@@ -4,6 +4,11 @@ import com.sana.app.model.SharedPlaylist
 import com.sana.app.model.SharedPlaylistSummary
 import kotlinx.coroutines.flow.Flow
 
+/**
+ * What: defines how shared playlists are observed, published, and copied into a user's plan.
+ * Who: Isaac.
+ * When: Goal 7 — Firebase integration.
+ */
 interface PlaylistRepository {
     fun observeSharedPlaylists(): Flow<List<SharedPlaylistSummary>>
 
