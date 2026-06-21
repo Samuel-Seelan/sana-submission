@@ -15,6 +15,7 @@ mlkitPose = "18.0.0-beta5"
 googleServices = "4.4.2"
 firebaseBom = "33.5.1"
 coroutinesPlayServices = "1.10.2"
+androidYouTubePlayer = "13.0.0"
 firebaseCrashlyticsBuildtools = "3.0.7"
 
 [libraries]
@@ -45,6 +46,7 @@ firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.r
 firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
 firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
 kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "coroutinesPlayServices" }
+android-youtube-player = { group = "com.pierfrancescosoffritti.androidyoutubeplayer", name = "core", version.ref = "androidYouTubePlayer" }
 firebase-crashlytics-buildtools = { group = "com.google.firebase", name = "firebase-crashlytics-buildtools", version.ref = "firebaseCrashlyticsBuildtools" }
 
 [plugins]

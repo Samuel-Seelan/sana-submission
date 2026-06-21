@@ -1,7 +1,5 @@
 package com.sana.app.ui.components
 
-import android.webkit.WebChromeClient
-import android.webkit.WebView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -39,12 +37,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.sana.app.model.Exercise
 import com.sana.app.model.ExerciseType
 import com.sana.app.model.SampleData
 import com.sana.app.ui.theme.SanaSurface
 import com.sana.app.ui.theme.SanaSurfaceVariant
 import com.sana.app.ui.theme.SanaTheme
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.YouTubePlayerCallback
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 
 /*
  * MediaPlaceholders.kt — stand-ins for the real video player and camera preview.
@@ -138,57 +141,34 @@ fun YouTubeEmbed(
     videoId: String,
     modifier: Modifier = Modifier,
 ) {
+    val lifecycleOwner = LocalLifecycleOwner.current
     AndroidView(
         modifier = modifier.background(Color.Black),
         factory = { context ->
-            WebView(context).apply {
-                webChromeClient = WebChromeClient()
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.mediaPlaybackRequiresUserGesture = false
-                loadYouTubeEmbed(videoId)
+            YouTubePlayerView(context).apply {
+                tag = videoId
+                lifecycleOwner.lifecycle.addObserver(this)
+                addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
+                    override fun onReady(youTubePlayer: YouTubePlayer) {
+                        youTubePlayer.cueVideo(tag as String, 0f)
+                    }
+                })
             }
         },
-        update = { webView ->
-            if (webView.tag != videoId) {
-                webView.loadYouTubeEmbed(videoId)
+        update = { playerView ->
+            if (playerView.tag != videoId) {
+                playerView.tag = videoId
+                playerView.getYouTubePlayerWhenReady(object : YouTubePlayerCallback {
+                    override fun onYouTubePlayer(youTubePlayer: YouTubePlayer) {
+                        youTubePlayer.cueVideo(videoId, 0f)
+                    }
+                })
             }
         },
-    )
-}
-
-private fun WebView.loadYouTubeEmbed(videoId: String) {
-    tag = videoId
-    loadDataWithBaseURL(
-        "https://www.youtube.com",
-        """
-        <!doctype html>
-        <html>
-          <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-              html, body, iframe {
-                margin: 0;
-                width: 100%;
-                height: 100%;
-                background: #000;
-              }
-            </style>
-          </head>
-          <body>
-            <iframe
-              src="https://www.youtube.com/embed/$videoId?playsinline=1&rel=0&modestbranding=1"
-              title="Exercise demonstration"
-              frameborder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowfullscreen>
-            </iframe>
-          </body>
-        </html>
-        """.trimIndent(),
-        "text/html",
-        "utf-8",
-        null,
+        onRelease = { playerView ->
+            lifecycleOwner.lifecycle.removeObserver(playerView)
+            playerView.release()
+        },
     )
 }
 

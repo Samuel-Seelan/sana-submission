@@ -1,6 +1,8 @@
 package com.sana.app.ui.screens.editplaylist
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -40,16 +43,24 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.sana.app.model.CatalogGroup
 import com.sana.app.model.Display
 import com.sana.app.model.Exercise
@@ -61,6 +72,9 @@ import com.sana.app.ui.components.ExerciseBadge
 import com.sana.app.ui.components.ExerciseCard
 import com.sana.app.ui.components.SectionHeader
 import com.sana.app.ui.theme.SanaTheme
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlin.math.roundToInt
 
 /*
  * EditPlaylistScreen.kt — build the day's workout.
@@ -88,6 +102,7 @@ fun EditPlaylistScreen(
     onMessageShown: () -> Unit = {},
     onAddExercise: (String) -> Unit = {},
     onRemoveExercise: (String) -> Unit = {},
+    onMoveExercise: (fromIndex: Int, toIndex: Int) -> Unit = { _, _ -> },
     onSave: () -> Unit = {},
     onPublish: (title: String, description: String) -> Unit = { _, _ -> },
 ) {
@@ -98,6 +113,47 @@ fun EditPlaylistScreen(
 
     val planIds = planItems.map { it.exercise.id }.toSet()
     val planExercises = planItems.map { it.exercise }
+    val planScrollState = rememberScrollState()
+    var planViewportWidthPx by remember { mutableIntStateOf(0) }
+    var draggedExerciseId by remember { mutableStateOf<String?>(null) }
+    var draggedOffsetX by remember { mutableFloatStateOf(0f) }
+    var draggedCenterX by remember { mutableFloatStateOf(0f) }
+    val currentPlanExercises by rememberUpdatedState(planExercises)
+    val currentOnMoveExercise by rememberUpdatedState(onMoveExercise)
+
+    // A card is 160dp wide with 12dp between cards. The list itself remains unchanged while the
+    // user drags; this slot size is used to choose the final position when they release the card.
+    val planItemSlotPx = with(androidx.compose.ui.platform.LocalDensity.current) { 172.dp.toPx() }
+    val planCardHalfWidthPx = with(androidx.compose.ui.platform.LocalDensity.current) { 80.dp.toPx() }
+    val planContentPaddingPx = with(androidx.compose.ui.platform.LocalDensity.current) { 16.dp.toPx() }
+    val autoScrollEdgePx = with(androidx.compose.ui.platform.LocalDensity.current) { 72.dp.toPx() }
+    val maxAutoScrollPerFramePx = with(androidx.compose.ui.platform.LocalDensity.current) { 18.dp.toPx() }
+
+    LaunchedEffect(draggedExerciseId) {
+        while (isActive && draggedExerciseId != null) {
+            val leftEdge = autoScrollEdgePx
+            val rightEdge = planViewportWidthPx - autoScrollEdgePx
+            val scrollAmount = when {
+                draggedCenterX < leftEdge -> {
+                    val intensity = ((leftEdge - draggedCenterX) / autoScrollEdgePx).coerceIn(0f, 1f)
+                    -maxAutoScrollPerFramePx * intensity
+                }
+                draggedCenterX > rightEdge -> {
+                    val intensity = ((draggedCenterX - rightEdge) / autoScrollEdgePx).coerceIn(0f, 1f)
+                    maxAutoScrollPerFramePx * intensity
+                }
+                else -> 0f
+            }
+
+            if (scrollAmount != 0f) {
+                val consumed = planScrollState.scrollBy(scrollAmount)
+                // Scrolling moves the row beneath the pointer. Counteract that movement on the
+                // selected card so it remains visually attached to the user's finger.
+                draggedOffsetX += consumed
+            }
+            delay(16L)
+        }
+    }
 
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(message) {
@@ -150,16 +206,76 @@ fun EditPlaylistScreen(
                         modifier = Modifier.fillMaxWidth(),
                     )
                 } else {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onSizeChanged { planViewportWidthPx = it.width },
                     ) {
-                        items(planExercises, key = { it.id }) { exercise ->
-                            PlanCard(
-                                exercise = exercise,
-                                onClick = { onOpenExercise(exercise.id) },
-                                onRemove = { onRemoveExercise(exercise.id) },
-                            )
+                        Row(
+                            modifier = Modifier
+                                .horizontalScroll(
+                                    state = planScrollState,
+                                    enabled = draggedExerciseId == null,
+                                )
+                                .padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            planExercises.forEach { exercise ->
+                                key(exercise.id) {
+                                    val isDragging = draggedExerciseId == exercise.id
+                                    PlanCard(
+                                        exercise = exercise,
+                                        onClick = { onOpenExercise(exercise.id) },
+                                        onRemove = { onRemoveExercise(exercise.id) },
+                                        modifier = Modifier
+                                            .zIndex(if (isDragging) 1f else 0f)
+                                            .graphicsLayer {
+                                                translationX = if (isDragging) draggedOffsetX else 0f
+                                                scaleX = if (isDragging) 1.03f else 1f
+                                                scaleY = if (isDragging) 1.03f else 1f
+                                            }
+                                            .pointerInput(exercise.id) {
+                                                detectDragGesturesAfterLongPress(
+                                                    onDragStart = {
+                                                        draggedExerciseId = exercise.id
+                                                        draggedOffsetX = 0f
+                                                        val currentIndex = currentPlanExercises
+                                                            .indexOfFirst { it.id == exercise.id }
+                                                        draggedCenterX = planContentPaddingPx +
+                                                            currentIndex * planItemSlotPx +
+                                                            planCardHalfWidthPx -
+                                                            planScrollState.value
+                                                    },
+                                                    onDragCancel = {
+                                                        draggedExerciseId = null
+                                                        draggedOffsetX = 0f
+                                                        draggedCenterX = 0f
+                                                    },
+                                                    onDragEnd = {
+                                                        val currentIndex = currentPlanExercises
+                                                            .indexOfFirst { it.id == exercise.id }
+                                                        if (currentIndex != -1) {
+                                                            val targetIndex = (currentIndex +
+                                                                (draggedOffsetX / planItemSlotPx).roundToInt())
+                                                                .coerceIn(currentPlanExercises.indices)
+                                                            if (targetIndex != currentIndex) {
+                                                                currentOnMoveExercise(currentIndex, targetIndex)
+                                                            }
+                                                        }
+                                                        draggedExerciseId = null
+                                                        draggedOffsetX = 0f
+                                                        draggedCenterX = 0f
+                                                    },
+                                                    onDrag = { change, dragAmount ->
+                                                        change.consume()
+                                                        draggedOffsetX += dragAmount.x
+                                                        draggedCenterX += dragAmount.x
+                                                    }
+                                                )
+                                            },
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -321,18 +437,38 @@ private fun PlanCard(
     exercise: Exercise,
     onClick: () -> Unit,
     onRemove: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     ExerciseCard(
         exercise = exercise,
         onClick = onClick,
+        modifier = modifier,
         overlay = {
-            // ExerciseCard invokes the overlay inside its Box, which places it top-start.
-            OverlayIconButton(onClick = onRemove) {
-                Icon(
-                    Icons.Filled.Close,
-                    contentDescription = "Remove from plan",
-                    modifier = Modifier.size(18.dp),
-                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                OverlayIconButton(onClick = onRemove) {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = "Remove from plan",
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .padding(6.dp)
+                        .size(30.dp)
+                        .clip(CircleShape)
+                        .background(OverlayScrim),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Filled.DragHandle,
+                        contentDescription = "Press and hold, then drag to reorder",
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
             }
         },
     )

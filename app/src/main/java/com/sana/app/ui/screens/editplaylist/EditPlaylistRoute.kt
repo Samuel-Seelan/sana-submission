@@ -40,6 +40,7 @@ fun EditPlaylistRoute(
         onMessageShown = viewModel::consumeMessage,
         onAddExercise = viewModel::addExercise,
         onRemoveExercise = viewModel::removeExercise,
+        onMoveExercise = viewModel::moveExercise,
         onSave = viewModel::save,
         onPublish = viewModel::publish,
     )
