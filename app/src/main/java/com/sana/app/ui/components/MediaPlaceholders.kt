@@ -36,12 +36,18 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.sana.app.model.Exercise
 import com.sana.app.model.ExerciseType
 import com.sana.app.model.SampleData
 import com.sana.app.ui.theme.SanaSurface
 import com.sana.app.ui.theme.SanaSurfaceVariant
 import com.sana.app.ui.theme.SanaTheme
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.YouTubePlayerCallback
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 
 /*
  * MediaPlaceholders.kt — stand-ins for the real video player and camera preview.
@@ -114,6 +120,56 @@ fun CameraPlaceholder(
             )
         }
     }
+}
+
+/** Shows an embedded YouTube demo when an exercise has a video id, otherwise falls back to art. */
+@Composable
+fun ExerciseDemoMedia(
+    exercise: Exercise,
+    modifier: Modifier = Modifier,
+) {
+    val videoId = exercise.youtubeVideoId
+    if (videoId.isNullOrBlank()) {
+        ExerciseDemoImage(exercise = exercise, modifier = modifier)
+    } else {
+        YouTubeEmbed(videoId = videoId, modifier = modifier)
+    }
+}
+
+@Composable
+fun YouTubeEmbed(
+    videoId: String,
+    modifier: Modifier = Modifier,
+) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    AndroidView(
+        modifier = modifier.background(Color.Black),
+        factory = { context ->
+            YouTubePlayerView(context).apply {
+                tag = videoId
+                lifecycleOwner.lifecycle.addObserver(this)
+                addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
+                    override fun onReady(youTubePlayer: YouTubePlayer) {
+                        youTubePlayer.cueVideo(tag as String, 0f)
+                    }
+                })
+            }
+        },
+        update = { playerView ->
+            if (playerView.tag != videoId) {
+                playerView.tag = videoId
+                playerView.getYouTubePlayerWhenReady(object : YouTubePlayerCallback {
+                    override fun onYouTubePlayer(youTubePlayer: YouTubePlayer) {
+                        youTubePlayer.cueVideo(videoId, 0f)
+                    }
+                })
+            }
+        },
+        onRelease = { playerView ->
+            lifecycleOwner.lifecycle.removeObserver(playerView)
+            playerView.release()
+        },
+    )
 }
 
 /**

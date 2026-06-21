@@ -30,6 +30,7 @@ object SampleData {
         defaultReps = 10,
         defaultSets = 3,
         defaultDurationSec = 0,
+        youtubeVideoId = "5TUK4uT2nnw",
     )
 
     val straightLegRaise = Exercise(
@@ -46,6 +47,7 @@ object SampleData {
         defaultReps = 10,
         defaultSets = 3,
         defaultDurationSec = 0,
+        youtubeVideoId = "zo2pqw794B0",
     )
 
     val heelSlides = Exercise(
@@ -62,6 +64,7 @@ object SampleData {
         defaultReps = 10,
         defaultSets = 3,
         defaultDurationSec = 0,
+        youtubeVideoId = "Bz0wSFRjH2c",
     )
 
     val wallSit = Exercise(
@@ -78,6 +81,7 @@ object SampleData {
         defaultReps = 0,
         defaultSets = 3,
         defaultDurationSec = 30,
+        youtubeVideoId = "pjbGm5EQd1s",
     )
 
     val bodyweightSquat = Exercise(
@@ -94,6 +98,7 @@ object SampleData {
         defaultReps = 8,
         defaultSets = 3,
         defaultDurationSec = 0,
+        youtubeVideoId = "m0GcZ24pK6k",
     )
 
     val pendulumSwings = Exercise(
@@ -110,6 +115,7 @@ object SampleData {
         defaultReps = 10,
         defaultSets = 2,
         defaultDurationSec = 0,
+        youtubeVideoId = "OKaxBRcoxzY",
     )
 
     val birdDog = Exercise(
@@ -126,6 +132,7 @@ object SampleData {
         defaultReps = 8,
         defaultSets = 3,
         defaultDurationSec = 0,
+        youtubeVideoId = "xEDnlOxeJH4",
     )
 
     val hamstringStretch = Exercise(
@@ -142,6 +149,7 @@ object SampleData {
         defaultReps = 0,
         defaultSets = 3,
         defaultDurationSec = 30,
+        youtubeVideoId = "u55F2jOzBVI",
     )
 
     val deadlift = Exercise(
@@ -158,6 +166,7 @@ object SampleData {
         defaultReps = 8,
         defaultSets = 3,
         defaultDurationSec = 0,
+        youtubeVideoId = "MDEb9wQmRwk",
     )
 
     val singleLegBalance = Exercise(
@@ -174,6 +183,7 @@ object SampleData {
         defaultReps = 0,
         defaultSets = 3,
         defaultDurationSec = 20,
+        youtubeVideoId = "Dtgh2_LFkBQ",
     )
 
     val gluteBridge = Exercise(
@@ -190,6 +200,7 @@ object SampleData {
         defaultReps = 12,
         defaultSets = 3,
         defaultDurationSec = 0,
+        youtubeVideoId = "WtilA9IJX1c",
     )
 
     /** A broad catalog slice for grids and carousels. */

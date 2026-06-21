@@ -55,7 +55,7 @@ import com.sana.app.model.ExerciseScore
 import com.sana.app.model.Recording
 import com.sana.app.model.SampleData
 import com.sana.app.ui.components.EmptyState
-import com.sana.app.ui.components.ExerciseDemoImage
+import com.sana.app.ui.components.ExerciseDemoMedia
 import com.sana.app.ui.components.SectionHeader
 import com.sana.app.ui.components.formatDuration
 import com.sana.app.ui.theme.BlockedRed
@@ -146,7 +146,7 @@ private fun ExerciseDetailContent(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.verticalScroll(rememberScrollState())) {
-        ExerciseDemoImage(
+        ExerciseDemoMedia(
             exercise = exercise,
             modifier = Modifier
                 .fillMaxWidth()

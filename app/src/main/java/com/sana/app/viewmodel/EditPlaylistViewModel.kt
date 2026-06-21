@@ -93,6 +93,14 @@ class EditPlaylistViewModel(
         workingPlan.value = current.filterNot { it.exercise.id == exerciseId }
     }
 
+    fun moveExercise(fromIndex: Int, toIndex: Int) {
+        val current = workingPlan.value ?: return
+        if (fromIndex !in current.indices || toIndex !in current.indices || fromIndex == toIndex) return
+        workingPlan.value = current.toMutableList().apply {
+            add(toIndex, removeAt(fromIndex))
+        }
+    }
+
     fun save() {
         val plan = workingPlan.value ?: return
         viewModelScope.launch {

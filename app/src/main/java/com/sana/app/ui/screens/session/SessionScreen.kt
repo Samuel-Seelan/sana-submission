@@ -48,7 +48,7 @@ import androidx.compose.ui.unit.dp
 import com.sana.app.model.PlanItem
 import com.sana.app.model.SampleData
 import com.sana.app.ui.components.CameraPlaceholder
-import com.sana.app.ui.components.ExerciseDemoImage
+import com.sana.app.ui.components.ExerciseDemoMedia
 import com.sana.app.ui.components.StatChip
 import com.sana.app.ui.components.formatDuration
 import com.sana.app.ui.components.targetLabel
@@ -222,7 +222,7 @@ private fun ActiveSession(
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Top half: stylized demo illustration of the current exercise.
-            ExerciseDemoImage(
+            ExerciseDemoMedia(
                 exercise = exercise,
                 modifier = Modifier
                     .fillMaxWidth()
